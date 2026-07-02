@@ -1,0 +1,13 @@
+# LaTeX build artifacts (keep CNT.pdf tracked — it's the deliverable)
+*.aux
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.out
+*.toc
+# editor / OS
+.vscode/
+.DS_Store
