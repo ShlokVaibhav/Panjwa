@@ -27,7 +27,7 @@ rigorous non-equilibrium Green's function simulations~\cite{leonardPropertiesSho
 
 Given the above coordinate choice for graphene unit cell, the band structure of a (N,0) CNT, obtained from the tight-binding model of graphene~\cite{netoElectronicPropertiesGraphene2009}, is expressed as:
 
-\begin{equation}
+\begin{equation}\label{eq:band-structure}
     E = \pm t_0 \sqrt{f(k_x, m)} = \pm t_0 \sqrt{1+4\cos\bigg{(}\frac{3k_xa}{2}\bigg{)}\cos\bigg{(}\frac{\pi m}{N}\bigg{)}+4\cos^2\bigg{(}\frac{\pi m}{N}\bigg{)} }
 \end{equation}
 
@@ -39,7 +39,7 @@ where $t_0 = 2.5eV$ is the tight-binding coupling constant and m is an index tha
 
 \subsection{Analytical expression for band-gap}
 CNT is one of those nice systems where the band-gap can be expressed analytically.
-In (1), consider the bands with a $+$ sign. Then
+In~\eqref{eq:band-structure}, consider the bands with a $+$ sign. Then
 the band-minimum, $E_{min_m}$ for a given band index, $m$, occurs when
 \begin{equation}
 \partial_{k_x}f(k_x, m)=0 \implies \frac{3k_xa}{2} \in \{0,\pi\}
@@ -77,11 +77,19 @@ First, we need to show the following approximation holds near the band-minimum:
 \end{equation}
 
 
+
 What do we mean by DoS? We mean Density of States at energy E per unit length, so that it is an intensive quantity.
 The DoS can be written for the case of 1D CNT as:
 \begin{equation}
     D(E) = \frac{1}{L}\frac{ \text{\# States in [k, k+dk]}}{dk(E)}
 \end{equation}
+
+In section 1.1 we discovered that a band minimum pairs $m_0$ with $\frac{3k_x a}{2} = \pi$. 
+So equation (1) can be rewritten as:
+\begin{equation}
+    E = \pm t_0 \sqrt{1-4\cos\bigg{(}\frac{\pi m_0}{N}\bigg{)}\cos\bigg{(}\frac{3k_xa}{2}\bigg{)}+4\cos^2\bigg{(}\frac{\pi m_0}{N}\bigg{)} }
+\end{equation}
+
 We already know dk(E) from above
 
 k-states are spaced uniformly with space $d \bigg{(}\frac{3k_x a}{2}\bigg{)} = \frac{3\pi a}{L}$ 
