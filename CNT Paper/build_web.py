@@ -33,6 +33,12 @@ FIG_DST = os.path.join(SITE_DIR, FIG_REL)
 PDF_URL = "https://github.com/ShlokVaibhav/Panjwa/blob/main/CNT%20Paper/CNT.pdf"
 SRC_URL = "https://github.com/ShlokVaibhav/Panjwa/tree/main/CNT%20Paper"
 
+# ---- 0. Refresh LaTeX .aux / .pdf so cross-reference numbers are current ----
+# (not check=True: latexmk may exit nonzero on transient ref warnings while
+#  still producing a correct .aux; we validate labels from the .aux below.)
+subprocess.run(["latexmk", "-pdf", "-interaction=nonstopmode", TEX],
+               cwd=PAPER_DIR, capture_output=True)
+
 # ---- 1. CONTENT: pandoc renders the whole document from source -------------
 full = subprocess.run(
     ["pandoc", TEX, "--standalone", "--citeproc", "--bibliography", BIB,
@@ -49,10 +55,23 @@ tm = re.search(r'<h1 class="title">(.*?)</h1>', titleblock, re.S)
 doc_title = re.sub(r"\s+", " ", tm.group(1)).strip() if tm else "CNT paper"
 
 # ---- 2. MECHANICAL fixes to pandoc output (deterministic) ------------------
+# figure path -> site asset
 body = body.replace('src="Restyled graphene lattice and Brillouin zone.png"',
                     f'src="{FIG_REL}"')
-body = re.sub(r'<a href="#eq:band-structure"[^>]*>\[eq:band-structure\]</a>',
-              r'\\(\\eqref{eq:band-structure}\\)', body)
+# Pandoc renders every \eqref/\ref as a link showing the raw label text
+# (e.g. "[eq:dkx-dE]"), with the <a> tag wrapped across newlines.
+#   * equation refs -> hand to MathJax, so they render "(N)" from the SAME
+#     counter that numbers the displayed equations (self-consistent).
+body = re.sub(r'<a href="#(eq:[^"]+)"[^>]*>\[[^\]]*\]</a>',
+              r'\\(\\eqref{\1}\\)', body)
+#   * section refs -> pandoc resolves these to a number itself, but we re-assert
+#     the value from LaTeX's .aux so section numbers are guaranteed identical to
+#     the PDF (single source of truth), keeping the working anchor link.
+_aux = open(os.path.join(PAPER_DIR, "CNT.aux"), encoding="utf-8").read()
+_auxnum = dict(re.findall(r'\\newlabel\{([^}]+)\}\{\{([^}]*)\}', _aux))
+body = re.sub(r'<a href="#(sec:[^"]+)"[^>]*>.*?</a>',
+              lambda mo: f'<a href="#{mo.group(1)}">{_auxnum.get(mo.group(1), mo.group(1))}</a>',
+              body, flags=re.S)
 
 # ---- 3. SITE CHROME: header + footer taken verbatim from notes.html --------
 notes = open(os.path.join(SITE_DIR, "notes.html"), encoding="utf-8").read()
