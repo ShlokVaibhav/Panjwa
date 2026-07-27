@@ -94,6 +94,7 @@ in the properties of the signal.
 
 This is the landmark field of "Robust Statistics" (Refer to the book by Huber and Ronchetti), yes i assumed a uniform distribution but experience shows this is a very robust estimator and even if you were to work out an exact theory, answers won't change much. 
 As empiricist this statement is, he demonstrates it in table 9.2 by producing the simualated vs estimated SQNR for a corner case.
+And in-fact, it is very robust, for if i were to assume that instead of being uniformly distributed, my noise is always $\pm \frac{A_{LSB}}{2}$, the resulting PSD would be 70% larger that what we estimated - off yes but not ugly.
 
 
 There is also another guardrail put by Pelgromm, he shows us how to analyze things when signal really becomes too rebellious - a pure sine wave touching the rails as well as when number of bits are too low - 1. 

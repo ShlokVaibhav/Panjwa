@@ -17,9 +17,14 @@ OUT     = os.path.join(SITE, "quantization.html")
 SRC_URL = "https://github.com/ShlokVaibhav/Panjwa/blob/main/ADCs/OnQuantization.md"
 
 # ---- 1. CONTENT: pandoc renders the markdown (math via MathJax) ----
+# De-indent ATX headings first: pandoc's `markdown` reader only recognises a heading
+# when the `#` is at column 0, so a stray leading space (1-3) makes `### ...` render
+# literally. (4+ spaces = an intentional indented code block, so leave those alone.)
+md = open(SRC, encoding="utf-8").read()
+md = re.sub(r"(?m)^[ \t]{1,3}(#{1,6}\s)", r"\1", md)
 body = subprocess.run(
-    ["pandoc", SRC, "--mathjax", "-f", "markdown", "-t", "html5"],
-    capture_output=True, text=True, check=True).stdout
+    ["pandoc", "--mathjax", "-f", "markdown", "-t", "html5"],
+    input=md, capture_output=True, text=True, check=True).stdout
 
 # title = first H1; lift it out of the body (shown once in the page-head)
 m = re.search(r"<h1[^>]*>(.*?)</h1>", body, re.S)
