@@ -127,6 +127,9 @@ HEAD = f'''<!DOCTYPE html>
   .csl-bib-body {{ margin-top: .6rem; }}
   .csl-entry {{ margin: .6rem 0; padding-left: 1.4rem; text-indent: -1.4rem; }}
   .doclinks {{ margin: 1rem 0 2rem; opacity: .85; }}
+  .tune {{ margin: .2rem 0 1.6rem; }}
+  .tune button {{ font: inherit; cursor: pointer; padding: .35rem .9rem; border: 1px solid rgba(0,0,0,.28); border-radius: 5px; background: transparent; color: inherit; opacity: .85; }}
+  .tune button:hover {{ opacity: 1; border-color: rgba(0,0,0,.5); }}
 </style>
 <script>window.MathJax = {{ tex: {{ tags: 'ams' }} }};</script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
@@ -134,12 +137,26 @@ HEAD = f'''<!DOCTYPE html>
 <body>
 '''
 
-# NAV-CHROME: the only script-authored strings on the page (navigation links).
+# NAV-CHROME: script-authored strings on the page (nav links + audio button label).
 doclinks = (f'<p class="doclinks"><a href="{PDF_URL}">PDF</a> &nbsp;·&nbsp; '
             f'<a href="{SRC_URL}">LaTeX source</a></p>')
 
+# Opt-in audio easter egg. NOT autoplay (browsers block sound-on-load); the clip
+# plays on click, toggles on a second click, and resets its label when it ends.
+TUNE = ('<div class="tune">\n'
+        '  <button id="tune-btn" type="button">▶ Laufet Brüder eure Bahn!</button>\n'
+        '  <audio id="tune-audio" src="media/eurebahn.m4a" preload="none"></audio>\n'
+        '</div>\n'
+        '<script>\n'
+        '(function(){var b=document.getElementById("tune-btn"),a=document.getElementById("tune-audio"),'
+        'P="▶ Laufet Brüder eure Bahn!",S="◼ Halt!";'
+        'b.addEventListener("click",function(){if(a.paused){a.currentTime=0;a.play();b.textContent=S;}'
+        'else{a.pause();b.textContent=P;}});'
+        'a.addEventListener("ended",function(){b.textContent=P;});})();\n'
+        '</script>')
+
 page = (HEAD + "\n" + header +
-        '\n\n<main class="wrap">\n' + titleblock + "\n" + doclinks +
+        '\n\n<main class="wrap">\n' + titleblock + "\n" + doclinks + "\n" + TUNE +
         '\n<article class="paper">\n' + body +
         '\n</article>\n</main>\n\n' + footer + "\n\n</body>\n</html>\n")
 
