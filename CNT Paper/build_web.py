@@ -12,9 +12,9 @@ The script only:
   * SITE CHROME  - header nav + footer copied verbatim from the site's own
                    notes.html, plus standard includes (Google font, styles.css,
                    MathJax). Site-owned, not authored here.
-  * MECHANICAL   - deterministic fixes to pandoc's output: rewrite the figure
-                   path to the site asset, and hand pandoc's \\eqref link to
-                   MathJax so it renders the live equation number.
+  * MECHANICAL   - deterministic fixes to pandoc's output: copy EVERY figure to
+                   a site asset + rewrite its path, and hand pandoc's \\eqref
+                   link to MathJax so it renders the live equation number.
   * NAV-CHROME   - two navigation links (PDF / LaTeX source). These two link
                    labels are the ONLY script-authored strings; see below.
 
@@ -24,14 +24,26 @@ import re, os, sys, subprocess
 
 PAPER_DIR = "/Users/shlok/Documents/Repos/Panjwa/CNT Paper"
 SITE_DIR  = "/Users/shlok/Documents/Repos/shlokvaibhav.github.io"
+PAPER_ID  = "cnt"                       # namespace prefix for this paper's assets
 TEX     = os.path.join(PAPER_DIR, "CNT.tex")
 BIB     = os.path.join(PAPER_DIR, "references.bib")
-FIG_SRC = os.path.join(PAPER_DIR, "Figures", "Restyled graphene lattice and Brillouin zone.png")
+FIG_DIR = os.path.join(PAPER_DIR, "Figures")
 OUT     = os.path.join(SITE_DIR, "cnt.html")
-FIG_REL = "papers/cnt-graphene-lattice-bz.png"
-FIG_DST = os.path.join(SITE_DIR, FIG_REL)
 PDF_URL = "https://github.com/ShlokVaibhav/Panjwa/blob/main/CNT%20Paper/CNT.pdf"
 SRC_URL = "https://github.com/ShlokVaibhav/Panjwa/tree/main/CNT%20Paper"
+
+# Preserve already-published asset URLs; any figure not listed is auto-named.
+FIG_RENAME = {"Restyled graphene lattice and Brillouin zone.png":
+              "papers/cnt-graphene-lattice-bz.png"}
+
+def asset_rel(fname):
+    """Site-relative asset path for a figure referenced in the .tex."""
+    if fname in FIG_RENAME:
+        return FIG_RENAME[fname]
+    slug = re.sub(r"[^a-z0-9]+", "-", os.path.splitext(fname)[0].lower()).strip("-")
+    if not slug.startswith(PAPER_ID):
+        slug = f"{PAPER_ID}-{slug}"
+    return f"papers/{slug}.png"
 
 # ---- 0. Refresh LaTeX .aux / .pdf so cross-reference numbers are current ----
 # (not check=True: latexmk may exit nonzero on transient ref warnings while
@@ -50,23 +62,35 @@ m = re.search(r'<header id="title-block-header">.*?</header>', full, re.S)
 if not m:
     sys.exit("ERROR: pandoc title block not found")
 titleblock = m.group(0)                          # title/author/date/abstract (from source)
-body = full[m.end(): full.rindex("</body>")]     # sections/eqns/figure/refs (from source)
+body = full[m.end(): full.rindex("</body>")]     # sections/eqns/figures/refs (from source)
 tm = re.search(r'<h1 class="title">(.*?)</h1>', titleblock, re.S)
 doc_title = re.sub(r"\s+", " ", tm.group(1)).strip() if tm else "CNT paper"
 
 # ---- 2. MECHANICAL fixes to pandoc output (deterministic) ------------------
-# figure path -> site asset
-body = body.replace('src="Restyled graphene lattice and Brillouin zone.png"',
-                    f'src="{FIG_REL}"')
-# Pandoc renders every \eqref/\ref as a link showing the raw label text
-# (e.g. "[eq:dkx-dE]"), with the <a> tag wrapped across newlines.
-#   * equation refs -> hand to MathJax, so they render "(N)" from the SAME
-#     counter that numbers the displayed equations (self-consistent).
+# 2a. FIGURES: discover EVERY \includegraphics in the source; copy each to a
+#     downscaled site asset and rewrite its <img src="..."> to that asset.
+figs = re.findall(r"\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}",
+                  open(TEX, encoding="utf-8").read())
+copied = []
+for fname in dict.fromkeys(figs):                # de-dup, preserve order
+    src = os.path.join(FIG_DIR, fname)
+    if not os.path.exists(src):
+        sys.exit(f"ERROR: figure referenced but not found: {src}")
+    rel = asset_rel(fname)
+    dst = os.path.join(SITE_DIR, rel)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    subprocess.run(["sips", "-Z", "1000", src, "--out", dst],
+                   capture_output=True, check=True)
+    body = body.replace(f'src="{fname}"', f'src="{rel}"')
+    copied.append(rel)
+
+# 2b. Pandoc renders every \eqref/\ref as a link showing the raw label text
+#     (e.g. "[eq:dkx-dE]"). Hand equation refs to MathJax so they render "(N)"
+#     from the SAME counter that numbers the displayed equations.
 body = re.sub(r'<a href="#(eq:[^"]+)"[^>]*>\[[^\]]*\]</a>',
               r'\\(\\eqref{\1}\\)', body)
-#   * section refs -> pandoc resolves these to a number itself, but we re-assert
-#     the value from LaTeX's .aux so section numbers are guaranteed identical to
-#     the PDF (single source of truth), keeping the working anchor link.
+# 2c. section refs -> re-assert the number from LaTeX's .aux (single source of
+#     truth), keeping the working anchor link.
 _aux = open(os.path.join(PAPER_DIR, "CNT.aux"), encoding="utf-8").read()
 _auxnum = dict(re.findall(r'\\newlabel\{([^}]+)\}\{\{([^}]*)\}', _aux))
 body = re.sub(r'<a href="#(sec:[^"]+)"[^>]*>.*?</a>',
@@ -119,10 +143,6 @@ page = (HEAD + "\n" + header +
         '\n<article class="paper">\n' + body +
         '\n</article>\n</main>\n\n' + footer + "\n\n</body>\n</html>\n")
 
-# structural asset: downscaled copy of the figure (not content)
-if os.path.exists(FIG_SRC):
-    subprocess.run(["sips", "-Z", "1000", FIG_SRC, "--out", FIG_DST],
-                   capture_output=True, check=True)
-
 open(OUT, "w", encoding="utf-8").write(page)
 print(f"wrote {OUT} ({len(page)} bytes); title from source: {doc_title!r}")
+print(f"figures copied ({len(copied)}): " + ", ".join(copied))
